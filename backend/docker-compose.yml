@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-kitsu}
+      POSTGRES_USER: ${DB_USER:-kitsu}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-kitsu}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: .
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://${DB_USER:-kitsu}:${DB_PASSWORD:-kitsu}@db:5432/${DB_NAME:-kitsu}}"
+      APP_NAME: ${APP_NAME:-Kitsu Backend}
+      DEBUG: ${DEBUG:-false}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+volumes:
+  postgres_data:

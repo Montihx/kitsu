@@ -1,0 +1,4 @@
+"""
+Kitsu backend application package.
+"""
+
