@@ -11,6 +11,7 @@ async def get_anime_list(
 ) -> list[Anime]:
     stmt = (
         select(Anime)
+        .where(Anime.is_deleted.is_(False), Anime.state == "published")
         .order_by(Anime.created_at.desc())
         .limit(limit)
         .offset(offset)
@@ -20,14 +21,24 @@ async def get_anime_list(
 
 
 async def get_anime_by_id(session: AsyncSession, anime_id: uuid.UUID) -> Anime | None:
-    return await session.get(Anime, anime_id)
+    stmt = select(Anime).where(
+        Anime.id == anime_id,
+        Anime.is_deleted.is_(False),
+        Anime.state == "published",
+    )
+    result = await session.execute(stmt)
+    return result.scalars().first()
 
 
 async def search_anime(db: AsyncSession, query: str, limit: int, offset: int) -> list[Anime]:
     pattern = f"%{query}%"
     stmt = (
         select(Anime)
-        .where(Anime.title.ilike(pattern))
+        .where(
+            Anime.title.ilike(pattern),
+            Anime.is_deleted.is_(False),
+            Anime.state == "published",
+        )
         .order_by(Anime.title.asc())
         .limit(limit)
         .offset(offset)

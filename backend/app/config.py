@@ -16,8 +16,8 @@ class Settings(BaseModel):
     database_url: str = Field(default="")
     redis_url: str = Field(default="redis://localhost:6379/0")
     allowed_origins: list[str] = Field(default_factory=list)
-    db_pool_size: int = Field(default=5)
-    db_max_overflow: int = Field(default=10)
+    db_pool_size: int = Field(default=10)
+    db_max_overflow: int = Field(default=20)
     db_pool_recycle: int = Field(default=1800)
     db_pool_pre_ping: bool = Field(default=True)
     secret_key: str | None = Field(default=None)
@@ -30,6 +30,8 @@ class Settings(BaseModel):
         secret_key = os.getenv("SECRET_KEY", "").strip()
         if not secret_key:
             raise ValueError("SECRET_KEY environment variable must be set")
+        if len(secret_key) < 32:
+            raise ValueError("SECRET_KEY must be at least 32 characters long")
 
         raw_allowed_origins = os.getenv("ALLOWED_ORIGINS", "").strip()
         if not raw_allowed_origins:

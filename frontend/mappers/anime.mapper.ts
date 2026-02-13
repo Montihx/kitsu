@@ -48,27 +48,25 @@ function isBackendRelease(data: unknown): data is BackendRelease {
 }
 
 /**
- * Maps backend status string to frontend Type enum
- * Returns undefined for null/empty status or unknown values
+ * Maps backend status string to frontend Type enum.
+ * Backend `status` is not the same as media type, so we use deterministic fallback (TV)
+ * until backend introduces a dedicated `media_type` field (future architecture evolution).
  * PURE function - no optional chaining
  */
-export function mapStatusToType(status?: string | null): Type | undefined {
-  if (!status) {
-    return undefined;
+export function mapStatusToType(status?: string | null): Type {
+  const normalizedStatus = status?.trim().toUpperCase() ?? "";
+
+  if (["TV", "TELEVISION", "TV SERIES", "SERIES"].includes(normalizedStatus)) {
+    return Type.Tv;
+  }
+  if (["ONA", "OVA", "WEB", "WEB SERIES", "WEB-SERIES"].includes(normalizedStatus)) {
+    return Type.Ona;
+  }
+  if (["MOVIE", "FILM", "THEATRICAL"].includes(normalizedStatus)) {
+    return Type.Movie;
   }
 
-  const normalizedStatus = status.toUpperCase();
-
-  switch (normalizedStatus) {
-    case "TV":
-      return Type.Tv;
-    case "ONA":
-      return Type.Ona;
-    case "MOVIE":
-      return Type.Movie;
-    default:
-      return undefined;
-  }
+  return Type.Tv;
 }
 
 /**
@@ -152,9 +150,6 @@ export function mapBackendAnimeToSpotlightAnime(dto: BackendAnime, rank: number)
   assertString(dto.title, "Anime.title");
   
   const type = mapStatusToType(dto.status);
-  if (!type) {
-    throw new Error(`Invalid or missing anime status for SpotlightAnime: ${dto.status}`);
-  }
 
   const titleOriginal = assertOptional(dto.title_original, assertString, "Anime.title_original") ?? dto.title;
 
@@ -194,9 +189,6 @@ export function mapBackendAnimeToTopUpcomingAnime(dto: BackendAnime): TopUpcomin
   assertString(dto.title, "Anime.title");
 
   const type = mapStatusToType(dto.status);
-  if (!type) {
-    throw new Error(`Invalid or missing anime status for TopUpcomingAnime: ${dto.status}`);
-  }
 
   const titleOriginal = assertOptional(dto.title_original, assertString, "Anime.title_original") ?? dto.title;
 

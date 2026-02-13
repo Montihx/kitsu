@@ -329,7 +329,7 @@ async def handle_integrity_error(request: Request, exc: IntegrityError) -> JSONR
     _log_error(request, status.HTTP_409_CONFLICT, ConflictError.code, message, exc)
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
-        content=error_payload(ConflictError.code, message, str(exc)),
+        content=error_payload(ConflictError.code, message, None),
     )
 
 
@@ -339,7 +339,7 @@ async def handle_programming_error(request: Request, exc: ProgrammingError) -> J
     _log_error(request, status.HTTP_500_INTERNAL_SERVER_ERROR, InternalError.code, message, exc)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content=error_payload(InternalError.code, message, str(exc)),
+        content=error_payload(InternalError.code, message, None),
     )
 
 
@@ -349,7 +349,7 @@ async def handle_no_result_found(request: Request, exc: NoResultFound) -> JSONRe
     _log_error(request, status.HTTP_404_NOT_FOUND, NotFoundError.code, message, exc)
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND,
-        content=error_payload(NotFoundError.code, message, str(exc)),
+        content=error_payload(NotFoundError.code, message, None),
     )
 
 
@@ -361,7 +361,7 @@ async def handle_multiple_results_found(
     _log_error(request, status.HTTP_409_CONFLICT, ConflictError.code, message, exc)
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
-        content=error_payload(ConflictError.code, message, str(exc)),
+        content=error_payload(ConflictError.code, message, None),
     )
 
 
@@ -378,7 +378,7 @@ async def handle_unhandled_exception(
     )
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content=error_payload(InternalError.code, InternalError.message, str(exc)),
+        content=error_payload(InternalError.code, InternalError.message, None),
     )
 
 
