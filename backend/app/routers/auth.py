@@ -1,6 +1,11 @@
 from fastapi import APIRouter, Depends, Request, status
 
-from ..dependencies import get_current_user_optional, get_refresh_token_port, get_user_port
+from ..dependencies import (
+    get_current_user,
+    get_current_user_optional,
+    get_refresh_token_port,
+    get_user_port,
+)
 from ..models.user import User
 from ..schemas.auth import (
     LogoutRequest,
@@ -9,6 +14,7 @@ from ..schemas.auth import (
     UserLogin,
     UserRegister,
 )
+from ..schemas.user import UserRead
 from ..use_cases.auth.login_user import login_user
 from ..use_cases.auth.logout_user import logout_user
 from ..use_cases.auth.refresh_session import refresh_session
@@ -72,3 +78,10 @@ async def logout(
     await logout_user(
         token_port, payload.refresh_token, user_id=user.id if user else None
     )
+
+
+@router.get("/users/me", response_model=UserRead)
+async def get_current_user_profile(
+    user: User = Depends(get_current_user),
+) -> User:
+    return user

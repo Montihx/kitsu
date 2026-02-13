@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .crud.favorite import FavoriteRepository
@@ -23,6 +24,7 @@ from .domain.ports.watch_progress import (
 from .domain.ports.token import RefreshTokenPort
 from .domain.ports.user import UserPort
 from .auth import rbac
+from .models.refresh_token import RefreshToken
 from .models.user import User
 from .security.token_inspection import ExpiredTokenError, InvalidTokenError, validate_access_token
 
@@ -107,10 +109,29 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload"
         ) from None
 
+    now = datetime.now(timezone.utc)
+    valid_user_result = await db.execute(
+        select(User)
+        .join(RefreshToken, RefreshToken.user_id == User.id)
+        .where(
+            User.id == user_id,
+            User.is_active.is_(True),
+            RefreshToken.revoked.is_(False),
+            RefreshToken.expires_at > now,
+        )
+    )
+    user = valid_user_result.scalars().first()
+    if user is not None:
+        return user
+
     user = await db.get(User, user_id)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+        )
+    if user.is_active is False:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="User is deactivated"
         )
 
     session_token = await token_port.get_by_user_id(user_id)
@@ -122,7 +143,7 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Session revoked"
         )
-    if session_token.expires_at <= datetime.now(timezone.utc):
+    if session_token.expires_at <= now:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Session has expired"
         )
