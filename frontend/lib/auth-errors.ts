@@ -99,6 +99,12 @@ const getAuthFailureState = (): AuthFailureState => {
   if (!clientAuthFailureState) {
     clientAuthFailureState = createAuthFailureState();
   }
+  if (
+    clientAuthFailureState.authFailureCommitted &&
+    getAuthStore().getState().auth
+  ) {
+    clientAuthFailureState.authFailureCommitted = false;
+  }
   return clientAuthFailureState;
 };
 
