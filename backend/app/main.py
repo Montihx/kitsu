@@ -319,7 +319,7 @@ async def handle_value_error(request: Request, exc: ValueError) -> JSONResponse:
     _log_error(request, status.HTTP_400_BAD_REQUEST, ValidationError.code, log_message, exc)
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
-        content=error_payload(ValidationError.code, "Invalid request", log_message),
+        content=error_payload(ValidationError.code, "Invalid request", None),
     )
 
 
