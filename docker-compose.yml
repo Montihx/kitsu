@@ -38,11 +38,6 @@ services:
     env_file:
       - path: ./backend/.env
         required: false
-    environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://kitsu:kitsu@postgres:5432/kitsu}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
-      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-at-least-32-characters}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
     ports:
       - "8000:8000"
     command: >
@@ -73,10 +68,8 @@ services:
       backend:
         condition: service_healthy
     env_file:
-      - path: ./frontend/.env.production
+      - path: ./frontend/.env
         required: false
-    environment:
-      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://backend:8000}
     ports:
       - "3000:3000"
 
