@@ -1,5 +1,3 @@
-import logging
-import os
 from typing import cast
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -21,7 +19,9 @@ from sqlalchemy.exc import (
 
 from .background import default_job_runner
 from .config import settings
+from .core import configure_logging, get_settings as get_core_settings
 from .database import engine
+from .errors.handlers import register_exception_handlers
 from .errors import (
     AppError,
     AuthError,
@@ -35,6 +35,7 @@ from .errors import (
 )
 from .admin import router as admin_router
 from .api import router as api_router
+from .api.v1 import router as api_v1_router
 from .parser.admin import router as parser_admin_router
 from .parser.jobs.autoupdate import parser_autoupdate_scheduler
 from .routers import (
@@ -53,27 +54,20 @@ AVATAR_DIR = Path(__file__).resolve().parent.parent / "uploads" / "avatars"
 # This is a minimal side effect - just directory creation with exist_ok=True
 AVATAR_DIR.mkdir(parents=True, exist_ok=True)
 
-log_level_name = os.getenv("LOG_LEVEL", "INFO").upper()
-
-
-def _resolve_log_level(value: str) -> int:
-    level = logging.getLevelName(value)
-    return level if isinstance(level, int) else logging.INFO
-
-
-log_level = _resolve_log_level(log_level_name)
-
-if not logging.getLogger().handlers:
-    logging.basicConfig(
-        level=log_level,
-        format="%(asctime)s %(levelname)s %(name)s %(message)s",
-    )
-logger = logging.getLogger("kitsu")
-logger.setLevel(log_level)
+core_settings = get_core_settings()
+logger = configure_logging(core_settings.log_level)
 
 
 def _health_response(status_text: str, status_code: int) -> JSONResponse:
-    return JSONResponse(status_code=status_code, content={"status": status_text})
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "status": status_text,
+            "data": {"status": status_text},
+            "meta": None,
+            "error": None if status_code < 500 else {"code": "internal_error", "message": "Service unhealthy", "details": None},
+        },
+    )
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -224,6 +218,7 @@ routers = [
     admin_router.router,
     parser_admin_router.router,
     api_router,
+    api_v1_router,
 ]
 
 for router in routers:
@@ -382,7 +377,7 @@ async def handle_unhandled_exception(
     )
 
 
-
+register_exception_handlers(app, logger)
 
 @app.get("/health", tags=["health"])
 async def healthcheck() -> Response:

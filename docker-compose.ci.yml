@@ -1,0 +1,12 @@
+services:
+  backend:
+    environment:
+      DATABASE_URL: postgresql+asyncpg://kitsu:kitsu@postgres:5432/kitsu
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: dev-secret-key-at-least-32-characters
+      ALLOWED_ORIGINS: http://localhost:3000
+      API_INTERNAL_BASE_URL: http://backend:8000
+
+  frontend:
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000

@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  backend-quality:
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.12-slim
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: kitsu
+          POSTGRES_USER: kitsu
+          POSTGRES_PASSWORD: kitsu
+        options: >-
+          --health-cmd "pg_isready -U kitsu"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+asyncpg://kitsu:kitsu@postgres:5432/kitsu
+      SECRET_KEY: dev-secret-key-at-least-32-characters
+      ALLOWED_ORIGINS: http://localhost:3000
+      REDIS_URL: redis://localhost:6379/1
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Install git
+        run: apt-get update && apt-get install -y git
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install backend dependencies
+        run: python -m pip install -e .[dev]
+
+      - name: Ruff
+        run: ruff check app tests
+
+      - name: Mypy
+        run: mypy app/models app/schemas
+
+      - name: Alembic upgrade head
+        run: python -m alembic upgrade head
+
+      - name: Pytest
+        run: python -m pytest
+  frontend-quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Vitest
+        run: npm run test
+
+      - name: Next build
+        run: npm run build
+
+  compose-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: docker compose version
+        run: docker compose version
+
+      - name: docker compose -f docker-compose.yml -f docker-compose.ci.yml config
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml config
+
+      - name: docker compose -f docker-compose.yml -f docker-compose.ci.yml build
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml build
+
+      - name: docker compose up -d
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --wait --wait-timeout 180
+
+      - name: docker compose -f docker-compose.yml -f docker-compose.ci.yml ps
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml ps
+
+      - name: docker compose logs
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml logs --no-color --tail=200
+
+      - name: docker compose -f docker-compose.yml -f docker-compose.ci.yml down -v
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml down -v

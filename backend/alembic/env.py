@@ -13,15 +13,14 @@ if BASE_DIR not in sys.path:
     sys.path.append(BASE_DIR)
 
 from app.config import settings  # noqa: E402
-from app.models.base import Base  # noqa: E402
-from app import models  # noqa: F401,E402
+from app.db.base import metadata  # noqa: E402
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = Base.metadata
+target_metadata = metadata
 
 
 def run_migrations_offline() -> None:
